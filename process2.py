@@ -1,21 +1,17 @@
-import numpy as np
-from numpy.lib.npyio import save
-from scipy.interpolate import make_interp_spline
-import matplotlib.pyplot as plt
-from scipy import interpolate
-import os
-import label_file
-import cv2
-import threading
-from numpy import inf
 import copy
 import math
-import random, string
+import os
 import random
-from argparse import Namespace
-from scipy import stats
+import string
+import threading
 
-from scipy.sparse import base
+import cv2
+import numpy as np
+from numpy import inf
+from scipy import stats
+from scipy.interpolate import make_interp_spline
+
+import label_file
 
 X_ORIENTATION = 0
 Y_ORIENTATION = 1
@@ -94,6 +90,7 @@ def get_slope(self, base_points, source_point, x_span, y_span):
     # lag used to set which point along spline off of entity do we want to select as comparison point
 
     # lag = 10
+    # dynamically adjust lag length based on max_idx
     lag = int(0.1 * max_idx)
     # TODO:: dynamically adjust lag length based on # samples here
 
@@ -408,10 +405,12 @@ def get_spline_anchors(entity1_center, entity2_center, entity1_bbox, entity2_bbo
             count += 1
             if count == tar_point:
                 end_point = [math.floor(current_point[0]), math.floor(current_point[1])]
-
-    spline_points = np.linspace(start_point, end_point, num=4, dtype=np.int)
-    x_span = spline_points[:, 0]
-    y_span = spline_points[:, 1]
+    try:
+        spline_points = np.linspace(start_point, end_point, num=4, dtype=np.int)
+        x_span = spline_points[:, 0]
+        y_span = spline_points[:, 1]
+    except:
+        raise ValueError
 
     # add noise in better way
     # x_noise = np.random.randint(0,20,(1,))
@@ -444,7 +443,7 @@ def draw_relationship(self, img, entity1_center, entity2_center, text1_shape, te
             relationship_bbox (list): 2D-list with bbox corners for spline and indicator as [[min_x,min_y],[max_x,min_y],[max_x,max_y],[min_x,max_y]]
 
     """
-
+    # change color
     arrow_color_list = [(0, 0, 0), (0, 240, 0), (240, 0, 0), (0, 0, 240), (240, 240, 0), (0, 240, 240), (240, 0, 240)]
     self.arrow_color = random.choice(arrow_color_list)
 
@@ -459,8 +458,10 @@ def draw_relationship(self, img, entity1_center, entity2_center, text1_shape, te
 
     img, entity1_bbox = draw_textbox(self, img, label1, entity1_center, w1, h1)
     img, entity2_bbox = draw_textbox(self, img, label2, entity2_center, w2, h2)
-
-    x_span, y_span = get_spline_anchors(entity1_center, entity2_center, entity1_bbox, entity2_bbox)
+    try:
+        x_span, y_span = get_spline_anchors(entity1_center, entity2_center, entity1_bbox, entity2_bbox)
+    except:
+        raise ValueError
     img, f, orientation, spline_bbox = draw_spline(self, img, x_span, y_span)
 
     img, indicator_bbox = draw_indicator(self, img, x_span, y_span, f, orientation)
@@ -699,10 +700,10 @@ class copy_thread(threading.Thread):
                            cv2.FONT_HERSHEY_DUPLEX]
         self.font_style = random.choice(font_style_list)
 
-        self.font_size = random.randint(5, 7) * 0.1
+        self.font_size = random.randint(5, 8) * 0.1
         self.padding = 0
 
-        self.thickness = random.randint(1, 5)
+        self.thickness = random.randint(2, 4)
 
         self.tip_len = random.randint(5, 15)
 
@@ -710,7 +711,7 @@ class copy_thread(threading.Thread):
 
         self.text_margin = random.randint(5, 15)
 
-        self.arrow_placement = END
+        self.arrow_placement = random.choice([START, END])
 
         arrow_color_list = [(0, 0, 0), (0, 240, 0), (240, 0, 0), (0, 0, 240), (240, 240, 0), (0, 240, 240),
                             (240, 0, 240)]
@@ -726,8 +727,11 @@ class copy_thread(threading.Thread):
 
         self.text_thickness = random.randint(1, 2)
 
-        self.indicator = INHIBIT
+        self.indicator = random.choice([INHIBIT, ACTIVATE])
+
         self.inhibit_tickness = self.thickness + 2
+        # the ratio between x_dim and y_dim is randomly generated
+        x_y_ratio = random.random() + 0.3
 
         # loop through templates
         # read template and get query coords
@@ -748,18 +752,26 @@ class copy_thread(threading.Thread):
             "shape_type": "polygon",
             "flags": {}
         }
+        # 'str_random_list' is come from 'str_random_text.txt'
+        f = open(r'str_random_text_less7.txt', 'r')
+        str_random_list_less7 = [i[:-1].split('\n') for i in f.readlines()]
+        str_random_list_less7 = [n for a in str_random_list_less7 for n in a]
         for relation_idx in range(30):
 
             # TODO:: make set of names to pull from or characters
 
-            tmp_str_len = random.randint(3, 7)
-            label1 = randomword(tmp_str_len).upper()
-            tmp_str_len = random.randint(3, 7)
-            label2 = randomword(tmp_str_len).upper()
+            # tmp_str_len = random.randint(3, 7)
+            # label1 = randomword(tmp_str_len).upper()
+            # tmp_str_len = random.randint(3, 7)
+            # label2 = randomword(tmp_str_len).upper()
+            label1 = random.choice(str_random_list_less7)
+            label2 = random.choice(str_random_list_less7)
 
             # TODO:: set y_dim params based on x_dim value
             x_dim = np.random.randint(100, 500)
-            y_dim = np.random.randint(100, 500)
+            y_dim = int(x_dim * x_y_ratio)
+            if y_dim < 100:
+                y_dim += 150
             slice_shape = [x_dim, y_dim]
 
             # randomly select indicator head
@@ -780,10 +792,12 @@ class copy_thread(threading.Thread):
                     entity1_center, entity2_center, text1_shape, text2_shape = get_entity_placement(self, slice_shape,
                                                                                                     x_target, y_target,
                                                                                                     label1, label2)
-
-                    template_im, relationship_bbox = draw_relationship(self, template_im, entity1_center,
-                                                                       entity2_center, text1_shape, text2_shape, label1,
-                                                                       label2)
+                    try:
+                        template_im, relationship_bbox = draw_relationship(self, template_im, entity1_center,
+                                                                           entity2_center, text1_shape, text2_shape,
+                                                                           label1, label2)
+                    except:
+                        continue
 
                     # generate annotation
                     label1_x1 = math.floor(entity1_center[0] - (text1_shape[0] / 2))
@@ -816,12 +830,14 @@ class copy_thread(threading.Thread):
                     indicator_shape = copy.deepcopy(base_shape)
                     indicator_shape['points'] = relationship_bbox
                     indicator_shape['ID'] = element_indx
-                    if self.indicator == INHIBIT:
-                        indicator_shape['label'] = str(element_indx) + ":inhibit:" + str(
-                            label1_shape['ID']) + "|" + str(label2_shape['ID'])
+                    if self.arrow_placement == START:
+                        id2id_str = str(label2_shape['ID']) + "|" + str(label1_shape['ID'])
                     else:
-                        indicator_shape['label'] = str(element_indx) + ":activate:" + str(
-                            label1_shape['ID']) + "|" + str(label2_shape['ID'])
+                        id2id_str = str(label1_shape['ID']) + "|" + str(label2_shape['ID'])
+                    if self.indicator == INHIBIT:
+                        indicator_shape['label'] = str(element_indx) + ":inhibit:" + id2id_str
+                    else:
+                        indicator_shape['label'] = str(element_indx) + ":activate:" + id2id_str
                     element_indx += 1
 
                     shapes.append(label1_shape)
@@ -889,4 +905,3 @@ if __name__ == "__main__":
     # TODO:: lower high-freq threshold based on colors being used for entities and arrows
     # another interesting idea would be to include targeted noise (i.e. lines with no indicator connecting no entities)
     populate_figures()
-

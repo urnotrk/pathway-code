@@ -13,6 +13,8 @@ from scipy.interpolate import make_interp_spline
 
 import label_file
 
+# TIPS:: hey Joshua!  Search  'Change: :'  for the modified parts
+
 X_ORIENTATION = 0
 Y_ORIENTATION = 1
 
@@ -28,9 +30,10 @@ INHIBIT = 0
 ACTIVATE = 1
 
 
-def randomword(length):
-    letters = string.ascii_lowercase
-    return ''.join(random.choice(letters) for i in range(length))
+# Change:: this function is not used
+# def randomword(length):
+#     letters = string.ascii_lowercase
+#     return ''.join(random.choice(letters) for i in range(length))
 
 
 def check_orientation(source_point, comparison_pt):
@@ -88,10 +91,12 @@ def get_slope(self, base_points, source_point, x_span, y_span):
     comparison_pt = None
     dist = 50
     # lag used to set which point along spline off of entity do we want to select as comparison point
-
+    # Origin ::
     # lag = 10
-    # dynamically adjust lag length based on max_idx
+
+    # Change:: lag dynamically adjust
     lag = int(0.1 * max_idx)
+    # change end
     # TODO:: dynamically adjust lag length based on # samples here
 
     candidate_points = []
@@ -150,7 +155,8 @@ def draw_spline(self, img, x_span, y_span):
     # make linespace to serve as first param and interpolating the target values which is the set of x & y values
     spl = make_interp_spline(param, np.c_[x_span, y_span], k=3)  # (1)
     # TODO:: change 500 parameter to be dynamic based on manitude differences in x_span
-    X_, Y_ = spl(np.linspace(0, 1, x_span.size * 500)).T  # (2)
+    # Change::
+    X_, Y_ = spl(np.linspace(0, 1, x_span.size * 50)).T  # (2) # Origin:: 500
 
     X_ = np.round(X_, 0).astype(int)
     Y_ = np.round(Y_, 0).astype(int)
@@ -342,10 +348,41 @@ def draw_textbox(self, img, label, location, w, h):
 
     # places text
     # to add boarder just do same rectangle but don't fill and can just make it to include optionally
-    img = cv2.rectangle(img, (x1, y1), (x1 + w + (self.text_margin * 2), y1 + h + (self.text_margin * 2)),
-                        self.textbox_background, -1)
-    img = cv2.rectangle(img, (x1, y1), (x1 + w + (self.text_margin * 2), y1 + h + (self.text_margin * 2)), (0, 0, 0),
-                        self.textbox_border_thickness)
+
+    # Origin::
+    # img = cv2.rectangle(img, (x1, y1), (x1 + w + (self.text_margin * 2), y1 + h + (self.text_margin * 2)),
+    #                     self.textbox_background, -1)
+    # img = cv2.rectangle(img, (x1, y1), (x1 + w + (self.text_margin * 2), y1 + h + (self.text_margin * 2)), (0, 0, 0),
+    #                     self.textbox_border_thickness)
+    # # putText takes coordinates of the bottom-left corner of the text string
+    # img = cv2.putText(img, label, (x1 + self.text_margin, y1 + h + self.text_margin), self.font_style, self.font_size,
+    #                   self.text_color, self.text_thickness)
+    #
+    # bbox = [[x1, y1], [x1 + w + (self.text_margin * 2), y1 + h + (self.text_margin * 2)]]
+    #
+    # return img, bbox
+
+    # Change::
+    textbox_shape = random.choice(['ellipse', 'circle', 'rectangle'])
+    if textbox_shape == 'ellipse':
+        img = cv2.ellipse(img, (location[0], location[1]),
+                          (w, h + self.text_margin), 0, 0, 360,
+                          self.textbox_background, -1)
+        img = cv2.ellipse(img, (location[0], location[1]),
+                          (w, h + self.text_margin), 0, 0, 360, (0, 0, 0),
+                          self.textbox_border_thickness)
+    elif textbox_shape == 'circle':
+        img = cv2.circle(img, (location[0], location[1]),
+                         int((w * w + h * h) ** 0.5 * 0.5) + self.text_margin,
+                         self.textbox_background, -1)
+        img = cv2.circle(img, (location[0], location[1]),
+                         int((w * w + h * h) ** 0.5 * 0.5) + self.text_margin, (0, 0, 0),
+                         self.textbox_border_thickness)
+    elif textbox_shape == 'rectangle':
+        img = cv2.rectangle(img, (x1, y1), (x1 + w + (self.text_margin * 2), y1 + h + (self.text_margin * 2)),
+                            self.textbox_background, -1)
+        img = cv2.rectangle(img, (x1, y1), (x1 + w + (self.text_margin * 2), y1 + h + (self.text_margin * 2)),
+                            (0, 0, 0), self.textbox_border_thickness)
     # putText takes coordinates of the bottom-left corner of the text string
     img = cv2.putText(img, label, (x1 + self.text_margin, y1 + h + self.text_margin), self.font_style, self.font_size,
                       self.text_color, self.text_thickness)
@@ -405,6 +442,11 @@ def get_spline_anchors(entity1_center, entity2_center, entity1_bbox, entity2_bbo
             count += 1
             if count == tar_point:
                 end_point = [math.floor(current_point[0]), math.floor(current_point[1])]
+    # Origin::
+    #     spline_points = np.linspace(start_point, end_point, num=4, dtype=np.int)
+    #     x_span = spline_points[:, 0]
+    #     y_span = spline_points[:, 1]
+    # Change::
     try:
         spline_points = np.linspace(start_point, end_point, num=4, dtype=np.int)
         x_span = spline_points[:, 0]
@@ -443,25 +485,30 @@ def draw_relationship(self, img, entity1_center, entity2_center, text1_shape, te
             relationship_bbox (list): 2D-list with bbox corners for spline and indicator as [[min_x,min_y],[max_x,min_y],[max_x,max_y],[min_x,max_y]]
 
     """
-    # change color
-    arrow_color_list = [(0, 0, 0), (0, 240, 0), (240, 0, 0), (0, 0, 240), (240, 240, 0), (0, 240, 240), (240, 0, 240)]
-    self.arrow_color = random.choice(arrow_color_list)
+    # Change:: change color
+    self.arrow_color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
 
-    textbox_background_list = [(23, 44, 60), (153, 80, 84), (217, 104, 49), (230, 179, 61)]
-    self.textbox_background = random.choice(textbox_background_list)
+    self.textbox_background = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
 
-    text_color_list = [(199, 237, 233), (175, 215, 237), (92, 167, 186), (255, 66, 93), (147, 224, 255)]
-    self.text_color = random.choice(text_color_list)
+    self.text_color = (255 - self.textbox_background[0], 255 - self.textbox_background[1],
+                       255 - self.textbox_background[2])
+    # change end
 
     w1, h1 = text1_shape
     w2, h2 = text2_shape
 
     img, entity1_bbox = draw_textbox(self, img, label1, entity1_center, w1, h1)
     img, entity2_bbox = draw_textbox(self, img, label2, entity2_center, w2, h2)
+
+    # Origin::
+    # x_span, y_span = get_spline_anchors(entity1_center, entity2_center, entity1_bbox, entity2_bbox)
+
+    # Change::
     try:
         x_span, y_span = get_spline_anchors(entity1_center, entity2_center, entity1_bbox, entity2_bbox)
     except:
         raise ValueError
+
     img, f, orientation, spline_bbox = draw_spline(self, img, x_span, y_span)
 
     img, indicator_bbox = draw_indicator(self, img, x_span, y_span, f, orientation)
@@ -521,9 +568,9 @@ def check_slice(template_im, slice_shape, x, y, padding=0):
             (bool): indicates if region is good or not
 
     '''
-
-    threshold = 50
-
+    # Change::
+    threshold = 120  # Origin::50
+    # change end
     template_slice = template_im[y - padding:y + slice_shape[1] + padding, x - padding:x + slice_shape[0] + padding, :]
 
     # if all pixels are the same, then don't even have to run the rest of check
@@ -696,6 +743,24 @@ class copy_thread(threading.Thread):
         # TODO:: set inhibit thickness based of off spline thickness and remove inhibit thickness parameter
         # TODO:: to get boarder on spline, just do thickness + 1 and don't fill, then run back over with different color at thickness and fill
 
+        # Origin::
+        # self.font_style = cv2.FONT_HERSHEY_SIMPLEX
+        # self.font_size = 0.6
+        # self.padding = 0
+        # self.thickness = 4
+        # self.tip_len = 10
+        # self.base_len = 20
+        # self.text_margin = 10
+        # self.arrow_placement = END
+        # self.arrow_color = (0, 0, 0)
+        # self.textbox_background = (0, 0, 230)
+        # self.textbox_border_thickness = 1
+        # self.text_color = (0, 0, 0)
+        # self.text_thickness = 1
+        # self.indicator = INHIBIT
+        # self.inhibit_tickness = 6
+
+        # Change:: change configurations randomly
         font_style_list = [cv2.FONT_HERSHEY_SIMPLEX, cv2.QT_FONT_NORMAL, cv2.FONT_HERSHEY_TRIPLEX,
                            cv2.FONT_HERSHEY_DUPLEX]
         self.font_style = random.choice(font_style_list)
@@ -713,25 +778,24 @@ class copy_thread(threading.Thread):
 
         self.arrow_placement = random.choice([START, END])
 
-        arrow_color_list = [(0, 0, 0), (0, 240, 0), (240, 0, 0), (0, 0, 240), (240, 240, 0), (0, 240, 240),
-                            (240, 0, 240)]
-        self.arrow_color = random.choice(arrow_color_list)
+        self.arrow_color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
 
-        textbox_background_list = [(23, 44, 60), (153, 80, 84), (217, 104, 49), (230, 179, 61)]
-        self.textbox_background = random.choice(textbox_background_list)
+        self.textbox_background = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
 
         self.textbox_border_thickness = random.randint(0, 2)
 
-        text_color_list = [(199, 237, 233), (175, 215, 237), (92, 167, 186), (255, 66, 93), (147, 224, 255)]
-        self.text_color = random.choice(text_color_list)
+        self.text_color = (255 - self.textbox_background[0], 255 - self.textbox_background[1],
+                           255 - self.textbox_background[2])
 
         self.text_thickness = random.randint(1, 2)
 
         self.indicator = random.choice([INHIBIT, ACTIVATE])
 
         self.inhibit_tickness = self.thickness + 2
-        # the ratio between x_dim and y_dim is randomly generated
-        x_y_ratio = random.random() + 0.3
+
+        # Change:: the ratio between x_dim and y_dim is randomly generated in four situations
+        x_y_ratio = random.random()
+        # change end
 
         # loop through templates
         # read template and get query coords
@@ -752,26 +816,35 @@ class copy_thread(threading.Thread):
             "shape_type": "polygon",
             "flags": {}
         }
-        # 'str_random_list' is come from 'str_random_text.txt'
+
+        # Change:: 'str_random_list_less7' is come from 'str_random_text_less7.txt'
         f = open(r'str_random_text_less7.txt', 'r')
         str_random_list_less7 = [i[:-1].split('\n') for i in f.readlines()]
         str_random_list_less7 = [n for a in str_random_list_less7 for n in a]
+        # change end
+
         for relation_idx in range(30):
 
             # TODO:: make set of names to pull from or characters
-
+            # Origin::
             # tmp_str_len = random.randint(3, 7)
             # label1 = randomword(tmp_str_len).upper()
             # tmp_str_len = random.randint(3, 7)
             # label2 = randomword(tmp_str_len).upper()
+
+            # Change::
             label1 = random.choice(str_random_list_less7)
             label2 = random.choice(str_random_list_less7)
 
             # TODO:: set y_dim params based on x_dim value
+            # Origin::
+            # x_dim = np.random.randint(100, 500)
+            # y_dim = np.random.randint(100, 500)
+            # slice_shape = [x_dim, y_dim]
+
+            # Change:: use x_y_ratio to change y_dim dynamicly
             x_dim = np.random.randint(100, 500)
-            y_dim = int(x_dim * x_y_ratio)
-            if y_dim < 100:
-                y_dim += 150
+            y_dim = int((x_dim * x_y_ratio + random.randint(0, 1500)) % 400 + 100)
             slice_shape = [x_dim, y_dim]
 
             # randomly select indicator head
@@ -792,6 +865,12 @@ class copy_thread(threading.Thread):
                     entity1_center, entity2_center, text1_shape, text2_shape = get_entity_placement(self, slice_shape,
                                                                                                     x_target, y_target,
                                                                                                     label1, label2)
+                    # Origin::
+                    # template_im, relationship_bbox = draw_relationship(self, template_im, entity1_center,
+                    #                                                    entity2_center, text1_shape, text2_shape,
+                    #                                                    label1, label2)
+
+                    # Change::
                     try:
                         template_im, relationship_bbox = draw_relationship(self, template_im, entity1_center,
                                                                            entity2_center, text1_shape, text2_shape,
@@ -830,6 +909,8 @@ class copy_thread(threading.Thread):
                     indicator_shape = copy.deepcopy(base_shape)
                     indicator_shape['points'] = relationship_bbox
                     indicator_shape['ID'] = element_indx
+
+                    # Change::
                     if self.arrow_placement == START:
                         id2id_str = str(label2_shape['ID']) + "|" + str(label1_shape['ID'])
                     else:
@@ -839,6 +920,7 @@ class copy_thread(threading.Thread):
                     else:
                         indicator_shape['label'] = str(element_indx) + ":activate:" + id2id_str
                     element_indx += 1
+                    # change end
 
                     shapes.append(label1_shape)
                     shapes.append(label2_shape)
